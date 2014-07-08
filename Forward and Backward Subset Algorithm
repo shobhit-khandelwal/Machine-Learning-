@@ -1,0 +1,46 @@
+require("corrgram")
+# Reading the data:
+data1<-read.table("detroit.txt", header=T)
+# This data has 10 columns. First eight columns are the regressors. 
+# "lpsa" (9th column) is the response variable, 
+# The last column "train" shows if the data is training/test data. 
+# We only use training data to fit the model, 
+# and then we test the model on the test data.  
+ 
+class(data)
+head(test)
+# dropping last column 
+ 
+ 
+hist(data[,"age"])
+sdata<-data
+head(sdata)
+ 
+ 
+##test <- sort(sample(dim(data)[1], floor(dim(data)[1]*0.25)))
+ 
+test1 <- data1[sample(1:nrow(data1),0.25*nrow(data1),replace=FALSE),]
+train1 <- data1[!(apply(data1, 1, toString) %in% apply(test1, 1, toString)), ]
+model<-lm(FTP~UEMP+MAN+LIC+GR+CLEAR+WM+NMAN+GOV+HE+WE+HOM+ACC+ASR, data=train1)
+#######################################
+# Foward step wise regression
+#########################################
+min.model<-lm(FTP~1, data=train1)
+fwd.model<- step(min.model,direction="forward",
+                 scope=(~UEMP+MAN+LIC+GR+CLEAR+WM+NMAN+GOV+HE+WE+HOM+ACC+ASR)
+                 , data=train1)
+ 
+summary(fwd.model)
+prediction<-predict(fwd.model,newdata=test1)
+error<-sum(((prediction- test1[,"FTP"])^2)/length(prediction))
+cat("Average RSS error on Test Data",error)
+ 
+#####################################################################
+# backward stepwise regression
+#####################################################################
+ 
+full.model<- lm(FTP~UEMP+MAN+LIC+GR+CLEAR+WM+NMAN+GOV+HE+WE+HOM+ACC+ASR, data=train1)
+bwd.model<-step(full.model,direction="backward")
+prediction<-predict(bwd.model,newdata=test1)
+error<-sum(((prediction-test1[,"FTP"])^2)/length(prediction))
+cat("Average RSS error on Test Data",error)
