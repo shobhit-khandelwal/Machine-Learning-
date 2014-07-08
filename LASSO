@@ -1,0 +1,12 @@
+################################################################
+# LASSO regression
+################################################################
+ 
+ 
+fit1=glmnet(x_train,y_train,alpha=1)  
+par(mfrow=c(1,1))
+ 
+plot(fit1,xvar="lambda")  #plots the coefficients for different lambda
+ 
+cvob1=cv.glmnet(x_train,y_train,alpha=1, nfolds=10) # cross validation for  10 fold lambda
+plot(cvob1)
