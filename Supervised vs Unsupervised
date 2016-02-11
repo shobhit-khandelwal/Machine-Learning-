@@ -1,0 +1,150 @@
+
+#####Shobhit Khandelwal
+
+
+#####################SUPERVISED LEARNING########################################
+#############Classification
+#Let's load in the data
+#load data
+data <- read.table("uspsdata.txt", sep = "\t", header=FALSE)
+#load labels
+labels <- read.table("uspscl.txt", sep = "\t", header=FALSE)
+#convert labels to logical
+labels <- labels == 1
+
+##split into test and training data
+#choose 10% of the data randomly for testing
+ind <- sample(nrow(data),floor(nrow(data)/10))
+#make training and test sets
+train <- data[-ind,]
+train.lab <- labels[-ind,]
+test <- data[ind,]
+test.lab <- labels[ind,]
+
+
+
+
+
+#helper rotation function
+rot <- function(m) t(m)[,nrow(m):1]
+#Make a function to show the image
+plotImg <- function(x) {
+  #convert from row of data frame to numeric vector
+  x <- as.numeric(x)
+  #convert to matrix
+  mat <- matrix(x,16,16,byrow = TRUE)
+  #use image function with grey scale
+  image(rot(mat),col = grey((0:256) / 256))
+}   
+
+######SVM
+#install package
+install.packages("e1071")
+#load library
+library("e1071")
+
+###Linear SVM
+
+#tune the SVM
+costs <- 2^(seq(-16,-6,1))
+
+linear <- tune("svm",train,train.lab,ranges = list(cost = costs),kernel = "linear",
+               type = "C-classification",tune.control = tune.control(
+                 sampling = "cross",cross = 5))
+plot(linear, main="Linear SVM 5-Fold CV Error")
+summary(linear)
+
+cost.linear <- linear$best.model$cost
+#train an SVM on all of the training data with this cost
+linear.final <- svm(train,train.lab,cost = cost.linear,kernel="linear",
+                    type = "C")
+# training error
+prediction <- predict(linear.final,test)
+misClass.linear <- sum(prediction != test.lab) / length(test.lab)
+misClass.linear
+
+
+###RBF Kernel SVM
+
+costs <- 2^(seq(-1,2,.5))
+gammas <- 2^(seq(-20,-13,1))
+rbf <- tune("svm",train,train.lab,ranges = list(cost = costs,gamma = gammas),
+            kernel = "radial", type = "C-classification",
+            tune.control = tune.control(sampling = "cross",cross = 5))
+plot(rbf,main = "Linear SVM 5-Fold CV Error")
+summary(rbf)
+#What cost,gamma pair was the best?
+cost.rbf <- rbf$best.model$cost
+gamma.rbf <- rbf$best.model$gamma
+
+
+#train and SVM with all of the training data
+rbf.final <- svm(train,train.lab,cost = cost.rbf,gamma = gamma.rbf,
+                 kernel="radial",type = "C")
+#Check our training error
+prediction <- predict(rbf.final,test)
+misClass.rbf <- sum(prediction != test.lab) / length(test.lab)
+misClass.rbf
+
+
+
+######Random Forest
+#install package
+install.packages('randomForest')
+#load library
+library('randomForest')
+
+##fit a random forest
+#use as.factor() to force randomForest to do classification
+randForest <- randomForest(train,as.factor(train.lab),type = "C")
+
+plot(randForest)
+
+oo
+
+
+#########################UNSUPERVISED LEARNING################################
+##############Dimensionality Reduction
+######PCA
+##Prepare the data
+#Extract the 6s
+sixes <- data[labels,]
+#look at a six
+plotImg(sixes[1,])
+
+##Do PCA
+pca <- prcomp(sixes,retx=TRUE)
+#Plot the eigenvalues of the covariance matrix
+plot(pca,type="l")
+#Look at the summary
+summary(pca)
+##Some plots
+
+plotImg(pca$center)
+
+plotImg(pca$rotation[,1])
+plotImg(pca$rotation[,2])
+plotImg(pca$rotation[,3])
+
+##########Clustering
+#####K-Means
+
+library(MASS)
+###generate dataset with 3 multivariate random normal distributions
+
+dat <- rbind(mvrnorm(150,c(0,0),diag(2)), #mean 0, identity covariance
+             mvrnorm(50,c(3,3),matrix(c(1,-.5,-.5,1),ncol = 2,byrow = T)),
+             mvrnorm(200,c(-5,1),matrix(c(1,.8,.8,1),ncol = 2,byrow = T)))
+color.true <- c(rep(1,150),rep(2,50),rep(3,200))
+##plot data
+plot(dat,ylab='',xlab='',col=color.true)
+##run k means and see how data is clustered
+clusters <- kmeans(dat,3)
+#plot data with clusters
+plot(dat,ylab='',xlab='',col=clusters$cluster)
+
+
+clusters <- kmeans(dat,5)
+#plot data with clusters
+plot(dat,ylab='',xlab='',col=clusters$cluster)
+
