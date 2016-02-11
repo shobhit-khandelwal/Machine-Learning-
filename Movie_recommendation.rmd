@@ -1,0 +1,156 @@
+## Assignment 7-2
+
+##Creating Response Matrix 
+
+# Response Matrix
+response <- dcast(critics, movieid~ person, value.var="rank")
+
+
+** Function optimized for bigger problems**
+
+opt<- function(M,X, gamma, B, epsilon )
+{
+  error.old<- 0
+  error.new <- 0
+
+  D<- dim(X)[1]
+  n<-dim(X)[2]
+  Z<- matrix(rep(0,n*M), nrow=M)
+  
+  
+  for(i in 1:50)
+  {
+  # for fixed B; optimize Z  
+  # Improved version:= with matrices
+    for(a in 1:n)
+    {
+      rows<- which(gamma[,a]==1)
+      C <-  t(B[rows,]) %*% X[rows,a] 
+      M.n <- t(B[rows,]) %*% B[rows,]       
+      Z[,a] <- ginv(M.n) %*% C   
+    }
+  
+  # For fixed Z; Optimize B  
+    for(a in 1:D)
+    {
+      cols<- which(gamma[a,]==1)
+      md <-  Z[,cols] %*% X[a,cols]   
+      Fd <- Z[,cols] %*% t(Z[,cols])       
+      B[a,] <- ginv(Fd) %*% md   
+    }
+  
+    error.new <- sqrt(mean((X- B %*% Z)^2, na.rm=T))
+   
+    # Checking convergence
+    if(abs(error.new-error.old) < epsilon){
+      break;
+    }else{
+      error.old<- error.new
+    }  
+  }
+  RMSE<- sqrt(mean((X- B %*% Z)^2, na.rm=T))
+  return (RMSE)
+}
+
+
+```
+
+
+**Setting up the stage for PCA on Movie Data**
+**Running the optimization iterations** 
+
+
+*2.a). d are movies ; trying out different values for M, M =15 seems to give the lowest error of 0.61*
+```{r ,cache= TRUE}
+M<- 15
+X <- as.matrix(response)
+
+D<- dim(X)[1]
+n<-dim(X)[2]
+
+gamma  <- X
+gamma[!is.na(X)]<-1
+gamma[is.na(X)] <- 0
+
+v<- rnorm(D*M,100,20)
+B<- matrix(v, nrow=D)
+epsilon<- 1e-5
+
+(final<- opt(M,X,gamma, B,epsilon ))
+```
+
+*Runnning d as critics*
+```{r ,cache= TRUE}
+M<- 15
+X <- t(as.matrix(response))
+
+gamma  <- X
+gamma[!is.na(X)]<-1
+gamma[is.na(X)] <- 0
+
+D<- dim(X)[1]
+n<-dim(X)[2]
+
+v<- rnorm(D*M,100,20)
+B<- matrix(v, nrow=D)
+epsilon<- 1e-5
+
+(final<- opt(M,X,gamma, B,epsilon ))
+
+```
+
+**Discussion**
+1) Effect of using number of critics as Dimensions( D)
+Since the ultimate goal is to fill the same matrix, if absolute optimum is reached case it will not matter. 
+X = BZ
+2) Error is almost same in both. := Proof
+
+**2.b) Running it for K=10 times**
+```{r ,cache= TRUE}
+M<- 5  # so that does not take much time
+K<- 10
+
+X <- as.matrix(response)
+
+gamma  <- X
+gamma[!is.na(X)]<-1
+gamma[is.na(X)] <- 0
+
+D<- dim(X)[1]
+n<-dim(X)[2]
+
+epsilon <- 1e-5
+RMSE<- c()
+
+for(i in 1:K)
+{
+
+  v<- rnorm(D*M,100,20)
+  B<- matrix(v, nrow=D)
+  RMSE[i]<- opt(M,X,gamma, B,epsilon)
+ 
+}
+
+plot(RMSE, pch=19)
+mean(RMSE)
+sd(RMSE)
+
+```
+**Discussion**
+
+
+**2.c) Movie Recommendations by Genre**
+*Recommend movies according to specific genres. Given G of dim = D X L, in our calculation we can use only movies of specific genres. So pass the X matrix corresponding to particular genres*
+
+```{r ,cache= TRUE, message=FALSE, warning=FALSE, error=FALSE, eval=FALSE}
+for(g in dim(G)[2])
+{
+  # assuming d as movies
+  X<- X * rep(G[,g], dim(X)[2])
+  
+  ## Call function on X now..!!!
+
+}
+```
+
+
